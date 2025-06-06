@@ -196,12 +196,8 @@ export default function CityTalkScreen() {
     }
   };
 
-  const handlePostPress = (postId: number) => {
-    // Navigate to the individual post page with the correct post ID
-    router.push({
-      pathname: "/routes/city-talk/[id]",
-      params: { id: postId.toString() }
-    });
+  const handlePostPress = (postId: string) => {
+    router.push(`/(tabs)/city-talk/${postId}`);
   };
 
   const handleImageError = (postId: number) => {
@@ -244,7 +240,7 @@ export default function CityTalkScreen() {
     // In a real app, this would send the post to an API
     console.log('New post:', post);
     // For now, we'll just close the modal
-    router.push('/routes/city-talk/add');
+    router.push('/(tabs)/city-talk/add');
   };
 
   const handleAuthorPress = (author: string) => {
@@ -376,7 +372,7 @@ export default function CityTalkScreen() {
           <TouchableOpacity 
             key={post.id} 
             style={styles.postCard}
-            onPress={() => handlePostPress(post.id)}
+            onPress={() => handlePostPress(post.id.toString())}
             activeOpacity={0.7}
           >
             {/* Post Header */}
@@ -456,7 +452,7 @@ export default function CityTalkScreen() {
       {/* Add Post FAB */}
       <TouchableOpacity 
         style={styles.fab}
-        onPress={() => router.push('/routes/city-talk/add')}
+        onPress={() => router.push('/(tabs)/city-talk/add')}
         activeOpacity={0.8}
       >
         <FontAwesome name="plus" size={20} color="#fff" />

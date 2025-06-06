@@ -1,9 +1,11 @@
 import { FontAwesome } from '@expo/vector-icons';
-import { Tabs } from "expo-router";
-import React, { useState } from 'react';
+import { Session } from '@supabase/supabase-js';
+import { Slot, useRouter, useSegments } from "expo-router";
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LocationProvider, useLocation } from '../context/LocationContext';
+import { supabase } from '../lib/supabase';
 
 function LocationBar() {
   const { location, loading, errorMsg, searchLocation, getCurrentLocation } = useLocation();
@@ -61,87 +63,71 @@ function LocationBar() {
   );
 }
 
+// Real auth state using Supabase
+const useAuth = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return {
+    session,
+    loading,
+    isAuthenticated: !!session,
+  };
+};
+
 export default function RootLayout() {
+  const { isAuthenticated, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
+
+  useEffect(() => {
+    setIsNavigationReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isNavigationReady || loading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/');
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/(tabs)/city-talk');
+    }
+  }, [isAuthenticated, segments, isNavigationReady, loading]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
   return (
     <LocationProvider>
       <SafeAreaProvider>
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
           <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-            <LocationBar />
-            <Tabs screenOptions={{
-              tabBarActiveTintColor: '#007AFF',
-              tabBarInactiveTintColor: '#666',
-              tabBarStyle: {
-                backgroundColor: '#fff',
-                borderTopWidth: 1,
-                borderTopColor: '#eee',
-                elevation: 0,
-                shadowOpacity: 0,
-                height: 60,
-                paddingBottom: 10,
-                paddingTop: 5,
-              },
-              header: () => null,
-            }}>
-              <Tabs.Screen
-                name="routes/city-talk"
-                options={{
-                  title: 'City Talk',
-                  tabBarLabel: 'City Talk',
-                  tabBarIcon: ({ color, focused }) => (
-                    <View style={focused && styles.glowContainer}>
-                      <FontAwesome name="comments" size={24} color={focused ? '#007AFF' : color} />
-                    </View>
-                  ),
-                }}
-              />
-              <Tabs.Screen
-                name="routes/hangouts"
-                options={{
-                  title: 'Hangouts',
-                  headerShown: false,
-                  tabBarIcon: ({ color, focused }) => (
-                    <View style={focused && styles.glowContainer}>
-                      <FontAwesome name="users" size={24} color={focused ? '#007AFF' : color} />
-                    </View>
-                  ),
-                }}
-              />
-              <Tabs.Screen
-                name="routes/maps"
-                options={{
-                  title: 'Maps',
-                  tabBarIcon: ({ color, focused }) => (
-                    <View style={focused && styles.glowContainer}>
-                      <FontAwesome name="map-marker" size={24} color={focused ? '#007AFF' : color} />
-                    </View>
-                  ),
-                }}
-              />
-              <Tabs.Screen
-                name="routes/sharing"
-                options={{
-                  title: 'Sharing',
-                  tabBarIcon: ({ color, focused }) => (
-                    <View style={focused && styles.glowContainer}>
-                      <FontAwesome name="share-alt" size={24} color={focused ? '#007AFF' : color} />
-                    </View>
-                  ),
-                }}
-              />
-              <Tabs.Screen
-                name="routes/profile"
-                options={{
-                  title: 'Profile',
-                  tabBarLabel: 'Profile',
-                  tabBarIcon: ({ color, focused }) => (
-                    <View style={focused && styles.glowContainer}>
-                      <FontAwesome name="user" size={24} color={focused ? '#007AFF' : color} />
-                    </View>
-                  ),
-                }}
-              />
-            </Tabs>
+            {segments[0] !== '(auth)' && <LocationBar />}
+            <Slot />
           </SafeAreaView>
         </View>
       </SafeAreaProvider>

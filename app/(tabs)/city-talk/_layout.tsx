@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import React from 'react';
 
 export default function CityTalkLayout() {
   return (
@@ -12,7 +13,7 @@ export default function CityTalkLayout() {
       <Stack.Screen
         name="[id]"
         options={{
-          headerShown: false
+          headerShown: false,
         }}
       />
       <Stack.Screen
